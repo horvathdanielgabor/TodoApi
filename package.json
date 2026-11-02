@@ -1,0 +1,37 @@
+{
+  "name": "todoapi",
+  "version": "1.0.0",
+  "description": "A API For TodoApp",
+  "keywords": [
+    "Nodejs",
+    "Server"
+  ],
+  "homepage": "https://github.com/horvathdanielgabor/TodoApi#readme",
+  "bugs": {
+    "url": "https://github.com/horvathdanielgabor/TodoApi/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/horvathdanielgabor/TodoApi.git"
+  },
+  "license": "ISC",
+  "author": "HDG",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate": "node migrations/migrations.js",
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "moment": "^2.31.0",
+    "mysql": "^2.18.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
