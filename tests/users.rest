@@ -1,0 +1,57 @@
+@Host= http://localhost
+@Port= 3000
+
+@server = {{Host}}:{{Port}}
+
+@token = {{login.response.body.token}}
+@adminToken = {{adminLogin.response.body.token}}
+
+### register
+
+# @name register
+POST {{server}}/api/users/register
+Content-Type: application/json
+
+{
+    "name": "Teszt Elek",
+    "email": "tesztelek@gmail.com",
+    "passwd": "Admin@123",
+    "confirm": "Admin@123"
+}
+
+### login
+
+# @name login
+POST {{server}}/api/users/login
+Content-Type: application/json
+
+{
+    "email": "tesztelek@gmail.com",
+    "passwd": "Admin@123"
+}
+
+### login Admin
+
+# @name adminLogin
+POST {{server}}/api/users/login
+Content-Type: application/json
+
+{
+    "email": "php@my.admin",
+    "passwd": "Admin@123"
+}
+
+### passmod
+PATCH  {{server}}/api/users/passmod
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "oldPasswd": "Admin@123",
+    "newPasswd": "Titkos2026!",
+    "confirm": "Titkos2026!"
+}
+
+### isloggedin
+POST {{server}}/api/users/logout
+Content-Type: application/json
