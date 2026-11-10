@@ -4,6 +4,10 @@ const SHA1 = require('sha1');
 const db = require('../config/db');
 const { generateToken, tokenCheck, verifyToken, adminCheck } = require('../config/jwt');
 
+// -----------------------------------------------
+// Auth ENDPOINTS
+// -----------------------------------------------
+
 // login
 router.post('/login', (req, res) => {
     let table = 'users';
@@ -31,7 +35,7 @@ router.post('/login', (req, res) => {
 
         // Logged in -> token generate ...
         const token = generateToken({
-            id: results[0].id,
+            ID: results[0].ID,
             name: results[0].name,
             email: results[0].email,
             role: results[0].role
@@ -92,6 +96,10 @@ router.post('/register', (req, res) => {
     });
 });
 
+// -----------------------------------------------
+// User ENDPOINTS
+// -----------------------------------------------
+
 // passmod
 router.patch('/passmod', tokenCheck, (req, res) => {
     let table = 'users';
@@ -109,43 +117,140 @@ router.patch('/passmod', tokenCheck, (req, res) => {
         return res.status(400).json({ error: 'Missing required fields!' });
     }
 
-    if (values[newPasswdIdx] != values[confirmIdx]){
-        return res.status(400).json({ error: 'The passwords doesn\'t match!' });
-    }
-    
-    return res.status(200).json({ message: user });
-
-    /*
-    db.query(`SELECT * FROM ${table} WHERE ID=?`, [verifyToken(id)], (err, results) => {
+    db.query(`SELECT * FROM ${table} WHERE ID=?`, [user.ID], (err, results) => {
         if (err){
             return res.status(500).json({ error: err.error });
         }
 
-        if (results.length > 0){
-            return res.status(400).json({ error: 'This e-mail already registered' });
+        if (results.length == 0){
+            return res.status(400).json({ error: 'This user does not exist!' });
         }
 
-        if (oldPasswdIdx > 0)
+        if (SHA1(values[oldPasswdIdx]) != results[0].passwd)
         {
-            values[oldPasswdIdx] = SHA1(values[oldPasswdIdx]);
+            return res.status(400).json({ error: "Old password does not match!" });
         }
+
+        if (values[newPasswdIdx] == values[oldPasswdIdx]){
+            return res.status(400).json({ error: 'The new and the old password matches!' });
+        }
+
+        if (values[newPasswdIdx] != values[confirmIdx]){
+            return res.status(400).json({ error: 'The passwords doesn\'t match!' });
+        }
+
+        // Build the update query dynamically based on provided fields
+        let updatedFields = Object.keys(req.body).map(field => `${field} = ?`).join(', ');
+        let updatedValues = Object.values(req.body);
+
+        db.query(`UPDATE ${table} SET ${updatedFields} WHERE ID=?`, [updatedValues,user.ID], (err, results) => {
+            if (err){
+                return res.status(500).json({ error: err.error });
+            }
+
+            return res.status(200).json({ message: "Password changed successfully!" });
+        });
     });
-    */
 });
 
 // profile
-router.post('/:id', tokenCheck, (req, res) => {
+router.get('/profile', tokenCheck, (req, res) => {
+    let table = 'users';
+    let user = req.user;
 
+    db.query(`SELECT * FROM ${table} WHERE ID=?`, [user.ID], (err, results) => {
+        if (err){
+            return res.status(500).json({ error: err.error });
+        }
+
+        if (results.length == 0){
+            return res.status(500).json({ error: "No profile found!" });
+        }
+
+        let profile = {
+            name: results[0].name,
+            email: results[0].email
+        }
+
+        return res.status(200).json({ user: profile });
+    });
 });
 
 // update user
-router.patch('/:id', tokenCheck, (req, res) => {
+router.patch('/profile', tokenCheck, (req, res) => {
+    let table = 'users';
+    let user = req.user;
+    let data = req.body;
 
+    let fields = Object.keys(data);
+    let values = Object.values(data);
+
+    let nameIdx = fields.indexOf('name');
+    let emailIdx = fields.indexOf('email');
+
+    if (nameIdx < 0 || emailIdx < 0){
+        return res.status(400).json({ error: 'Missing required fields!' });
+    }
+
+    db.query(`SELECT * FROM ${table} WHERE ID=?`, [user.ID], (err, results) => {
+        if (err){
+            return res.status(500).json({ error: err.error });
+        }
+
+        if (results.length == 0){
+            return res.status(400).json({ error: 'This user does not exist!' });
+        }
+
+        if (values[nameIdx] == results[0].name || values[emailIdx] == results[0].email){
+            return res.status(304).json({ error: 'There were no changes needed!' });
+        }
+
+        db.query(`SELECT * FROM ${table} WHERE email=?`, [values[emailIdx]], (err, results) => {
+            if (err){
+                return res.status(500).json({ error: err.error });
+            }
+
+            if (results.length > 0){
+                return res.status(401).json({ error: 'This email is already taken!' });
+            }
+
+            // Build the update query dynamically based on provided fields
+            let updatedFields = Object.keys(req.body).map(field => `${field} = ?`).join(', ');
+            let updatedValues = Object.values(req.body);
+
+            db.query(`UPDATE ${table} SET ${updatedFields} WHERE ID=?`, [updatedValues,user.ID], (err, results) => {
+                if (err){
+                    return res.status(500).json({ error: err.error });
+                }
+
+                return res.status(200).json({ message: "Profile successfully updated!" });
+            });
+        });
+    });
 });
 
 // delete user
-router.delete('/:id', tokenCheck, (req, res) => {
+router.delete('/profile', tokenCheck, (req, res) => {
+    const table = 'users';
+    const user = req.user;
 
+    db.query('DELETE FROM tasks WHERE ID=?', [user.ID], (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: err.error });
+        }
+
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ error: "No deletion need to be done!" });
+        }
+        
+        return res.status(200).json({ message: 'User successfuly deleted' });
+    });
 });
+
+// -----------------------------------------------
+// Admin ENDPOINTS
+// -----------------------------------------------
+
+
 
 module.exports = router;
